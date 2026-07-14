@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
+import { api } from "../api/client.js";
 
 // A channel-aware rich text editor used for WordPress content. Outputs HTML
 // (via editor.getHTML()) which the backend sends straight into the WordPress
@@ -14,6 +15,8 @@ const btn = (active) =>
   }`;
 
 export default function RichTextEditor({ value, onChange, editable = true }) {
+  const fileRef = useRef(null);
+  const [uploadingImg, setUploadingImg] = useState(false);
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -49,9 +52,19 @@ export default function RichTextEditor({ value, onChange, editable = true }) {
     editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
   };
 
-  const addImage = () => {
-    const url = window.prompt("URL ảnh:");
-    if (url) editor.chain().focus().setImage({ src: url }).run();
+  const onImageSelected = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImg(true);
+    try {
+      const url = await api.uploadFile(file);
+      editor.chain().focus().setImage({ src: url }).run();
+    } catch (err) {
+      window.alert(err.message || "Tải ảnh thất bại");
+    } finally {
+      setUploadingImg(false);
+      e.target.value = "";
+    }
   };
 
   return (
@@ -71,7 +84,8 @@ export default function RichTextEditor({ value, onChange, editable = true }) {
           <button type="button" className={btn(editor.isActive("blockquote"))} onClick={() => editor.chain().focus().toggleBlockquote().run()}>❝ Trích</button>
           <span className="w-px bg-slate-300 mx-1" />
           <button type="button" className={btn(editor.isActive("link"))} onClick={setLink}>🔗 Link</button>
-          <button type="button" className={btn(false)} onClick={addImage}>🖼 Ảnh</button>
+          <button type="button" className={btn(false)} onClick={() => fileRef.current?.click()} disabled={uploadingImg}>{uploadingImg ? "⏳ Đang tải…" : "🖼 Ảnh"}</button>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onImageSelected} />
           <span className="w-px bg-slate-300 mx-1" />
           <button type="button" className={btn(false)} onClick={() => editor.chain().focus().undo().run()}>↶</button>
           <button type="button" className={btn(false)} onClick={() => editor.chain().focus().redo().run()}>↷</button>

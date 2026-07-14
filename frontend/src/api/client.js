@@ -19,7 +19,19 @@ async function request(path, options = {}) {
   return data;
 }
 
+async function uploadFile(file) {
+  const res = await fetch(`${API_URL}/uploads`, {
+    method: "POST",
+    headers: { ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) },
+    body: (() => { const fd = new FormData(); fd.append("file", file); return fd; })()
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Tải ảnh thất bại");
+  return data.url;
+}
+
 export const api = {
+  uploadFile,
   login: (email, password) => request("/auth/login", { method: "POST", body: { email, password } }),
   register: (email, name, password) => request("/auth/register", { method: "POST", body: { email, name, password } }),
   me: () => request("/auth/me"),

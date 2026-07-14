@@ -24,6 +24,24 @@ export default function ContentEditor() {
   const [scheduledAt, setScheduledAt] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+  async function handleUploadMedia(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError("");
+    try {
+      const url = await api.uploadFile(file);
+      setMediaUrl(url);
+    } catch (err) {
+      setUploadError(err.message);
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
 
   useEffect(() => {
     if (!isNew || !currentBrand) return;
@@ -129,17 +147,21 @@ export default function ContentEditor() {
           placeholder="Bạn đang nghĩ gì?"
         />
         <div className="mt-3 border-t border-slate-100 pt-3">
-          <label className="text-xs font-medium text-slate-500">Ảnh đính kèm (URL)</label>
-          <input
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 mt-1 text-sm"
-            value={mediaUrl}
-            onChange={(e) => setMediaUrl(e.target.value)}
-            disabled={!canEdit}
-            placeholder="https://…"
-          />
           {mediaUrl ? (
-            <img src={mediaUrl} alt="" className="mt-2 rounded-lg max-h-40 object-cover border border-slate-200" onError={(e) => (e.currentTarget.style.display = "none")} />
-          ) : null}
+            <div className="relative inline-block">
+              <img src={mediaUrl} alt="" className="rounded-lg max-h-56 object-cover border border-slate-200" onError={(e) => (e.currentTarget.style.display = "none")} />
+              {canEdit && (
+                <button type="button" onClick={() => setMediaUrl("")} className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full w-7 h-7 flex items-center justify-center text-lg leading-none">×</button>
+              )}
+            </div>
+          ) : (
+            <label className={`inline-flex items-center gap-2 text-sm font-medium border border-dashed border-slate-300 rounded-lg px-4 py-3 ${canEdit && !uploading ? "cursor-pointer text-slate-600 hover:bg-slate-50 hover:border-slate-400" : "text-slate-400"}`}>
+              <span className="text-base">🖼️</span>
+              {uploading ? "Đang tải ảnh…" : "Thêm ảnh / video"}
+              <input type="file" accept="image/*" className="hidden" onChange={handleUploadMedia} disabled={!canEdit || uploading} />
+            </label>
+          )}
+          {uploadError && <p className="text-xs text-red-600 mt-1">{uploadError}</p>}
         </div>
       </div>
     </div>
