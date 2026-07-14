@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import EmojiPicker from "emoji-picker-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../api/client.js";
 import StatusBadge from "../components/StatusBadge.jsx";
@@ -26,6 +27,21 @@ export default function ContentEditor() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [showEmoji, setShowEmoji] = useState(false);
+  const bodyRef = useRef(null);
+
+  function insertEmoji(emoji) {
+    const ta = bodyRef.current;
+    if (!ta) { setBody((b) => b + emoji); return; }
+    const start = ta.selectionStart ?? body.length;
+    const end = ta.selectionEnd ?? body.length;
+    setBody((b) => b.slice(0, start) + emoji + b.slice(end));
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = start + emoji.length;
+      ta.setSelectionRange(pos, pos);
+    });
+  }
 
   async function handleUploadMedia(e) {
     const file = e.target.files?.[0];
@@ -124,8 +140,8 @@ export default function ContentEditor() {
   // ---- inline nodes ----------------------------------------------------
 
   const facebookEditor = (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 text-white" style={{ background: theme.grad }}>
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex items-center gap-2 px-4 py-3 text-white rounded-t-xl" style={{ background: theme.grad }}>
         <ChannelGlyph type="facebook" className="w-5 h-5" />
         <span className="font-semibold">Soạn bài Facebook</span>
         <span className="ml-auto text-xs opacity-90">{channelName}</span>
@@ -139,6 +155,7 @@ export default function ContentEditor() {
           </div>
         </div>
         <textarea
+          ref={bodyRef}
           rows={9}
           className="w-full text-[17px] placeholder:text-slate-400 border-0 focus:ring-0 focus:outline-none resize-none p-0"
           value={body}
@@ -146,6 +163,29 @@ export default function ContentEditor() {
           disabled={!canEdit}
           placeholder="Bạn đang nghĩ gì?"
         />
+        {canEdit && (
+          <div className="flex justify-end">
+            <div className="relative">
+              <button type="button" onClick={() => setShowEmoji((v) => !v)} className="text-xl w-9 h-9 rounded-full hover:bg-slate-100 flex items-center justify-center" title="Chèn emoji">😊</button>
+              {showEmoji && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowEmoji(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-50">
+                    <EmojiPicker
+                      onEmojiClick={(e) => insertEmoji(e.emoji)}
+                      emojiStyle="native"
+                      height={360}
+                      width={320}
+                      lazyLoadEmojis
+                      previewConfig={{ showPreview: false }}
+                      searchPlaceholder="Tìm emoji…"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
         <div className="mt-3 border-t border-slate-100 pt-3">
           {mediaUrl ? (
             <div className="relative inline-block">
