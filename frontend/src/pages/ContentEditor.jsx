@@ -111,7 +111,7 @@ export default function ContentEditor() {
   const isWordPress = channelType === "wordpress";
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-4xl">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-semibold">{isNew ? "Bài viết mới" : "Chi tiết bài viết"}</h1>
         {item && <StatusBadge status={item.status} />}
@@ -158,7 +158,7 @@ export default function ContentEditor() {
               <div className="richtext border border-slate-200 rounded-lg px-3 py-2 mt-1 bg-slate-50" dangerouslySetInnerHTML={{ __html: body || "<p class='text-slate-400'>(trống)</p>" }} />
             )
           ) : (
-            <textarea rows={8} className="w-full border border-slate-300 rounded-lg px-3 py-2 mt-1" value={body} onChange={(e) => setBody(e.target.value)} disabled={!canEdit} placeholder="Nội dung bài đăng..." />
+            <textarea rows={16} className="w-full border border-slate-300 rounded-lg px-3 py-2 mt-1" value={body} onChange={(e) => setBody(e.target.value)} disabled={!canEdit} placeholder="Nội dung bài đăng..." />
           )}
         </div>
 

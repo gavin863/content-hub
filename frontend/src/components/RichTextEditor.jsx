@@ -24,7 +24,7 @@ export default function RichTextEditor({ value, onChange, editable = true }) {
     editable,
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
     editorProps: {
-      attributes: { class: "richtext min-h-[220px] px-3 py-2 focus:outline-none" }
+      attributes: { class: "richtext min-h-[440px] px-3 py-2 focus:outline-none" }
     }
   });
 
