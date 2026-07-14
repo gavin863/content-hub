@@ -93,7 +93,25 @@ export default function ContentEditor() {
   async function handleApprove() {
     setError("");
     try {
-      const updated = await api.approveContent(id, scheduledAt ? new Date(scheduledAt).toISOString() : null);
+      const updated = await api.approveContent(id);
+      setItem(updated);
+    } catch (err) { setError(err.message); }
+  }
+
+  async function handleSchedule() {
+    setError("");
+    if (!scheduledAt) { setError("Pick a date & time first"); return; }
+    try {
+      const updated = await api.scheduleContent(id, new Date(scheduledAt).toISOString());
+      setItem(updated);
+      setScheduledAt("");
+    } catch (err) { setError(err.message); }
+  }
+
+  async function handleUnschedule() {
+    setError("");
+    try {
+      const updated = await api.unscheduleContent(id);
       setItem(updated);
     } catch (err) { setError(err.message); }
   }
@@ -124,8 +142,10 @@ export default function ContentEditor() {
   }
 
   const canEdit = isNew || (item && ["draft", "changes_requested"].includes(item.status) && item.author_id === user.id);
-  const canApprove = !isNew && item && item.status === "pending_review";
-  const canRetry = !isNew && item && item.status === "failed";
+  const isApprover = user?.is_super_admin || ["approver", "admin"].includes(currentBrand?.role);
+  const canReview = isApprover && item && item.status === "pending_review";
+  const canManagePublish = isApprover && item && ["approved", "scheduled"].includes(item.status);
+  const canRetry = isApprover && item && item.status === "failed";
 
   const channelType = isNew ? channel?.type : item?.channel_type;
   const channelName = isNew ? channel?.name : item?.channel_name;
@@ -265,7 +285,7 @@ export default function ContentEditor() {
 
   const feedbackPanel = (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-      {(canEdit || canApprove || canRetry) && (
+      {(canEdit || canReview || canManagePublish || canRetry) && (
         <div className="p-4 border-b border-slate-100 space-y-3">
           {canEdit && (
             <div className="flex gap-2">
@@ -273,18 +293,35 @@ export default function ContentEditor() {
               <button onClick={() => handleSave(true)} disabled={saving} className="flex-1 px-4 py-2 rounded-lg text-white text-sm font-medium shadow-sm" style={{ background: theme.color }}>Submit for review</button>
             </div>
           )}
-          {canApprove && (
+
+          {/* Step 1: review — approve or send back. No scheduling here. */}
+          {canReview && (
+            <div className="flex gap-2">
+              <button onClick={handleApprove} className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium">Approve</button>
+              <button onClick={handleRequestChanges} className="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium">Request changes</button>
+            </div>
+          )}
+
+          {/* Step 2 (after approved): publish now OR schedule for later. */}
+          {canManagePublish && (
             <>
+              {item.status === "scheduled" && (
+                <div className="text-xs bg-indigo-50 text-indigo-700 rounded-lg px-3 py-2 flex items-center justify-between">
+                  <span>⏰ Scheduled for {new Date(item.scheduled_at).toLocaleString()}</span>
+                  <button onClick={handleUnschedule} className="underline hover:no-underline">Cancel</button>
+                </div>
+              )}
+              <button onClick={handleRetryPublish} className="w-full px-4 py-2 rounded-lg text-white text-sm font-medium" style={{ background: theme.color }}>Publish now</button>
               <div>
-                <label className="text-xs font-medium text-slate-500">Schedule (leave empty = publish now)</label>
-                <input type="datetime-local" className="w-full border border-slate-300 rounded-lg px-3 py-2 mt-1 text-sm" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
-              </div>
-              <div className="flex gap-2">
-                <button onClick={handleApprove} className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium">Approve {scheduledAt ? "& schedule" : "& publish"}</button>
-                <button onClick={handleRequestChanges} className="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium">Request changes</button>
+                <label className="text-xs font-medium text-slate-500">{item.status === "scheduled" ? "Reschedule" : "Or schedule for later"}</label>
+                <div className="flex gap-2 mt-1">
+                  <input type="datetime-local" className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
+                  <button onClick={handleSchedule} className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium">{item.status === "scheduled" ? "Update" : "Schedule"}</button>
+                </div>
               </div>
             </>
           )}
+
           {canRetry && (
             <button onClick={handleRetryPublish} className="w-full px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-medium">Retry publish</button>
           )}

@@ -94,7 +94,8 @@ router.post("/:id/submit", requireAuth, async (req, res) => {
   res.json(rows[0]);
 });
 
-// Approve -> publishes immediately, or marks 'scheduled' if scheduledAt is in the future
+// Approve -> just marks the item 'approved'. Scheduling and publishing are
+// separate, explicit actions (see /schedule and /publish-now below).
 router.post("/:id/approve", requireAuth, async (req, res) => {
   const { rows: itemRows } = await query("SELECT * FROM content_items WHERE id = $1", [req.params.id]);
   if (!itemRows.length) return res.status(404).json({ error: "Not found" });
@@ -102,21 +103,51 @@ router.post("/:id/approve", requireAuth, async (req, res) => {
 
   const gate = await requireBrandRole("approver");
   await gate({ ...req, params: { brandId: item.brand_id } }, res, async () => {
-    const { scheduledAt } = req.body;
-    const isFuture = scheduledAt && new Date(scheduledAt) > new Date();
-
     const { rows } = await query(
-      `UPDATE content_items SET
-         status = $1, reviewer_id = $2, scheduled_at = $3, rejection_reason = NULL, updated_at = now()
-       WHERE id = $4 RETURNING *`,
-      [isFuture ? "scheduled" : "approved", req.user.id, scheduledAt || null, req.params.id]
+      `UPDATE content_items SET status = 'approved', reviewer_id = $1,
+         rejection_reason = NULL, updated_at = now() WHERE id = $2 RETURNING *`,
+      [req.user.id, req.params.id]
     );
+    res.json(rows[0]);
+  });
+});
 
-    if (!isFuture) {
-      // publish right away
-      const result = await publishContentItem(rows[0]);
-      return res.json(result);
+// Schedule an approved item for a future time. The per-minute scheduler then
+// auto-publishes it when that time arrives.
+router.post("/:id/schedule", requireAuth, async (req, res) => {
+  const { rows: itemRows } = await query("SELECT * FROM content_items WHERE id = $1", [req.params.id]);
+  if (!itemRows.length) return res.status(404).json({ error: "Not found" });
+  const item = itemRows[0];
+
+  const gate = await requireBrandRole("approver");
+  await gate({ ...req, params: { brandId: item.brand_id } }, res, async () => {
+    const { scheduledAt } = req.body;
+    if (!scheduledAt || new Date(scheduledAt) <= new Date()) {
+      return res.status(400).json({ error: "Schedule time must be in the future" });
     }
+    if (!["approved", "scheduled"].includes(item.status)) {
+      return res.status(400).json({ error: "Only approved posts can be scheduled" });
+    }
+    const { rows } = await query(
+      `UPDATE content_items SET status = 'scheduled', scheduled_at = $1, updated_at = now()
+       WHERE id = $2 RETURNING *`,
+      [scheduledAt, req.params.id]
+    );
+    res.json(rows[0]);
+  });
+});
+
+// Cancel a schedule -> back to 'approved' (keeps it out of the auto-publisher).
+router.post("/:id/unschedule", requireAuth, async (req, res) => {
+  const { rows: itemRows } = await query("SELECT * FROM content_items WHERE id = $1", [req.params.id]);
+  if (!itemRows.length) return res.status(404).json({ error: "Not found" });
+  const gate = await requireBrandRole("approver");
+  await gate({ ...req, params: { brandId: itemRows[0].brand_id } }, res, async () => {
+    const { rows } = await query(
+      `UPDATE content_items SET status = 'approved', scheduled_at = NULL, updated_at = now()
+       WHERE id = $1 RETURNING *`,
+      [req.params.id]
+    );
     res.json(rows[0]);
   });
 });
