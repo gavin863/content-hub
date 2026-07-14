@@ -6,14 +6,16 @@ import StatusBadge from "../components/StatusBadge.jsx";
 import RichTextEditor from "../components/RichTextEditor.jsx";
 import { channelTheme, ChannelGlyph, BrandAvatar } from "../components/BrandMark.jsx";
 
+// NOTE: all sub-views below are inline JSX (const nodes), NOT nested components.
+// Defining components inside the render remounts them every keystroke and drops
+// input focus after one character — so everything stays inline here.
 export default function ContentEditor() {
-  const { id } = useParams();
-  const isNew = id === "new";
+  const { id, channelId } = useParams();
+  const isNew = !!channelId; // /content/compose/:channelId → new draft on a fixed channel
   const { currentBrand, user } = useAuth();
   const navigate = useNavigate();
 
-  const [channels, setChannels] = useState([]);
-  const [channelId, setChannelId] = useState("");
+  const [channel, setChannel] = useState(null); // resolved channel for a new draft
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [mediaUrl, setMediaUrl] = useState("");
@@ -24,9 +26,9 @@ export default function ContentEditor() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!currentBrand) return;
-    api.channels(currentBrand.id).then(setChannels);
-  }, [currentBrand]);
+    if (!isNew || !currentBrand) return;
+    api.channels(currentBrand.id).then((chs) => setChannel(chs.find((c) => c.id === channelId) || null));
+  }, [isNew, channelId, currentBrand]);
 
   useEffect(() => {
     if (isNew) return;
@@ -34,7 +36,6 @@ export default function ContentEditor() {
       setItem(data);
       setTitle(data.title || "");
       setBody(data.body);
-      setChannelId(data.channel_id);
       const mu = Array.isArray(data.media_urls) ? data.media_urls : [];
       setMediaUrl(mu[0] || "");
     });
@@ -65,9 +66,7 @@ export default function ContentEditor() {
     try {
       const updated = await api.approveContent(id, scheduledAt ? new Date(scheduledAt).toISOString() : null);
       setItem(updated);
-    } catch (err) {
-      setError(err.message);
-    }
+    } catch (err) { setError(err.message); }
   }
 
   async function handleRequestChanges() {
@@ -76,9 +75,7 @@ export default function ContentEditor() {
       const updated = await api.requestChanges(id, comment);
       setItem(updated);
       setComment("");
-    } catch (err) {
-      setError(err.message);
-    }
+    } catch (err) { setError(err.message); }
   }
 
   async function handleAddComment() {
@@ -94,66 +91,21 @@ export default function ContentEditor() {
     try {
       const updated = await api.publishNow(id);
       setItem(updated);
-    } catch (err) {
-      setError(err.message);
-    }
+    } catch (err) { setError(err.message); }
   }
 
   const canEdit = isNew || (item && ["draft", "changes_requested"].includes(item.status) && item.author_id === user.id);
   const canApprove = !isNew && item && item.status === "pending_review";
   const canRetry = !isNew && item && item.status === "failed";
 
-  const channelType = isNew ? channels.find((c) => c.id === channelId)?.type : item?.channel_type;
+  const channelType = isNew ? channel?.type : item?.channel_type;
+  const channelName = isNew ? channel?.name : item?.channel_name;
   const isWordPress = channelType === "wordpress";
   const theme = channelTheme(channelType);
-  const channelName = isNew ? channels.find((c) => c.id === channelId)?.name : item?.channel_name;
 
-  // ---- sub-views -------------------------------------------------------
+  // ---- inline nodes ----------------------------------------------------
 
-  const FacebookPreview = () => (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-      <div className="p-3 flex items-center gap-2.5">
-        <BrandAvatar name={currentBrand?.name} size={40} />
-        <div className="leading-tight">
-          <div className="font-semibold text-[15px] text-slate-900">{currentBrand?.name}</div>
-          <div className="text-xs text-slate-500 flex items-center gap-1">Vừa xong · <span>🌐</span> Công khai</div>
-        </div>
-      </div>
-      <div className="px-3 pb-3 whitespace-pre-wrap text-[15px] text-slate-800 min-h-[40px]">
-        {body ? body : <span className="text-slate-400">Nội dung bài đăng sẽ hiển thị ở đây…</span>}
-      </div>
-      {mediaUrl ? (
-        <img src={mediaUrl} alt="" className="w-full max-h-[360px] object-cover border-t border-slate-100" onError={(e) => (e.currentTarget.style.display = "none")} />
-      ) : null}
-      <div className="px-2 py-1 border-t border-slate-100 grid grid-cols-3 text-slate-500 text-sm font-medium">
-        <span className="flex items-center justify-center gap-1.5 py-2 hover:bg-slate-50 rounded">👍 Thích</span>
-        <span className="flex items-center justify-center gap-1.5 py-2 hover:bg-slate-50 rounded">💬 Bình luận</span>
-        <span className="flex items-center justify-center gap-1.5 py-2 hover:bg-slate-50 rounded">↗ Chia sẻ</span>
-      </div>
-    </div>
-  );
-
-  const WordPressPreview = () => (
-    <article className="rounded-xl border border-slate-200 bg-white shadow-sm p-6 sm:p-8">
-      <h1 className="text-[26px] leading-tight font-bold text-slate-900" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-        {title || <span className="text-slate-400">Tiêu đề bài viết</span>}
-      </h1>
-      <div className="flex items-center gap-2 text-xs text-slate-500 mt-2 mb-5 pb-4 border-b border-slate-100">
-        <BrandAvatar name={user?.name} size={22} grad="linear-gradient(135deg,#64748B,#334155)" />
-        bởi {user?.name} · hôm nay · <span className="inline-flex items-center gap-1" style={{ color: theme.color }}><ChannelGlyph type="wordpress" className="w-3.5 h-3.5" /> {channelName}</span>
-      </div>
-      <div className="richtext" dangerouslySetInnerHTML={{ __html: body || "<p style='color:#94a3b8'>Nội dung bài viết sẽ hiển thị ở đây…</p>" }} />
-    </article>
-  );
-
-  const Preview = () => (
-    <div>
-      <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Xem trước {isWordPress ? "bài viết" : "bài đăng"}</p>
-      {isWordPress ? <WordPressPreview /> : <FacebookPreview />}
-    </div>
-  );
-
-  const FacebookEditor = () => (
+  const facebookEditor = (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-3 text-white" style={{ background: theme.grad }}>
         <ChannelGlyph type="facebook" className="w-5 h-5" />
@@ -193,7 +145,7 @@ export default function ContentEditor() {
     </div>
   );
 
-  const WordPressEditor = () => (
+  const wordpressEditor = (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-3 text-white" style={{ background: theme.grad }}>
         <ChannelGlyph type="wordpress" className="w-5 h-5" />
@@ -214,126 +166,155 @@ export default function ContentEditor() {
     </div>
   );
 
+  const editorNode = isWordPress ? wordpressEditor : facebookEditor;
+
+  const facebookPreview = (
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="p-3 flex items-center gap-2.5">
+        <BrandAvatar name={currentBrand?.name} size={40} />
+        <div className="leading-tight">
+          <div className="font-semibold text-[15px] text-slate-900">{currentBrand?.name}</div>
+          <div className="text-xs text-slate-500 flex items-center gap-1">Vừa xong · <span>🌐</span> Công khai</div>
+        </div>
+      </div>
+      <div className="px-3 pb-3 whitespace-pre-wrap text-[15px] text-slate-800 min-h-[40px]">
+        {body ? body : <span className="text-slate-400">Nội dung bài đăng sẽ hiển thị ở đây…</span>}
+      </div>
+      {mediaUrl ? (
+        <img src={mediaUrl} alt="" className="w-full max-h-[360px] object-cover border-t border-slate-100" onError={(e) => (e.currentTarget.style.display = "none")} />
+      ) : null}
+      <div className="px-2 py-1 border-t border-slate-100 grid grid-cols-3 text-slate-500 text-sm font-medium">
+        <span className="flex items-center justify-center gap-1.5 py-2">👍 Thích</span>
+        <span className="flex items-center justify-center gap-1.5 py-2">💬 Bình luận</span>
+        <span className="flex items-center justify-center gap-1.5 py-2">↗ Chia sẻ</span>
+      </div>
+    </div>
+  );
+
+  const wordpressPreview = (
+    <article className="rounded-xl border border-slate-200 bg-white shadow-sm p-6 sm:p-8">
+      <h1 className="text-[26px] leading-tight font-bold text-slate-900" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+        {title || <span className="text-slate-400">Tiêu đề bài viết</span>}
+      </h1>
+      <div className="flex items-center gap-2 text-xs text-slate-500 mt-2 mb-5 pb-4 border-b border-slate-100">
+        <BrandAvatar name={user?.name} size={22} grad="linear-gradient(135deg,#64748B,#334155)" />
+        bởi {user?.name} · hôm nay · <span className="inline-flex items-center gap-1" style={{ color: theme.color }}><ChannelGlyph type="wordpress" className="w-3.5 h-3.5" /> {channelName}</span>
+      </div>
+      <div className="richtext" dangerouslySetInnerHTML={{ __html: body || "<p style='color:#94a3b8'>Nội dung bài viết sẽ hiển thị ở đây…</p>" }} />
+    </article>
+  );
+
+  const previewNode = isWordPress ? wordpressPreview : facebookPreview;
+
+  const channelBadge = channelType ? (
+    <span className="inline-flex items-center gap-2 rounded-full pl-1 pr-3 py-1 text-sm font-medium" style={{ background: theme.soft, color: theme.color }}>
+      <span className="inline-flex items-center justify-center rounded-full w-6 h-6 text-white" style={{ background: theme.grad }}>
+        <ChannelGlyph type={channelType} className="w-3.5 h-3.5" />
+      </span>
+      {channelName}
+    </span>
+  ) : null;
+
+  // Feedback / action panel shown on the RIGHT for an existing post.
+  const feedbackPanel = (
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+      {(canEdit || canApprove || canRetry) && (
+        <div className="p-4 border-b border-slate-100 space-y-3">
+          {canEdit && (
+            <div className="flex gap-2">
+              <button onClick={() => handleSave(false)} disabled={saving} className="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium hover:bg-slate-50">Lưu nháp</button>
+              <button onClick={() => handleSave(true)} disabled={saving} className="flex-1 px-4 py-2 rounded-lg text-white text-sm font-medium shadow-sm" style={{ background: theme.color }}>Gửi duyệt</button>
+            </div>
+          )}
+          {canApprove && (
+            <>
+              <div>
+                <label className="text-xs font-medium text-slate-500">Lên lịch (bỏ trống = đăng ngay)</label>
+                <input type="datetime-local" className="w-full border border-slate-300 rounded-lg px-3 py-2 mt-1 text-sm" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={handleApprove} className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium">Duyệt {scheduledAt ? "& lên lịch" : "& đăng"}</button>
+                <button onClick={handleRequestChanges} className="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium">Yêu cầu sửa</button>
+              </div>
+            </>
+          )}
+          {canRetry && (
+            <button onClick={handleRetryPublish} className="w-full px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-medium">Thử đăng lại</button>
+          )}
+          {item?.external_post_id && item.status === "published" && (
+            <p className="text-xs text-slate-500">Đã đăng · ID: {item.external_post_id}</p>
+          )}
+        </div>
+      )}
+      <div className="p-4">
+        <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+          Feedback
+          {item?.comments?.length ? <span className="text-xs bg-slate-100 text-slate-600 rounded-full px-2 py-0.5">{item.comments.length}</span> : null}
+        </h2>
+        <div className="space-y-3 mb-3 max-h-[50vh] overflow-y-auto">
+          {item?.comments?.length ? item.comments.map((c) => (
+            <div key={c.id} className="flex gap-2">
+              <BrandAvatar name={c.user_name} size={28} grad="linear-gradient(135deg,#7C3AED,#A855F7)" />
+              <div className="min-w-0 flex-1">
+                <div className="text-xs text-slate-500 mb-0.5">{c.user_name}</div>
+                <div className="text-sm bg-slate-50 rounded-lg px-3 py-2 text-slate-800 break-words">{c.comment}</div>
+              </div>
+            </div>
+          )) : <p className="text-sm text-slate-400">Chưa có bình luận nào.</p>}
+        </div>
+        <div className="flex gap-2">
+          <input className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Nói gì đó…" onKeyDown={(e) => { if (e.key === "Enter") handleAddComment(); }} />
+          <button onClick={handleAddComment} className="px-3 py-2 rounded-lg bg-slate-900 text-white text-sm">Gửi</button>
+        </div>
+      </div>
+    </div>
+  );
+
   // ---- render ----------------------------------------------------------
 
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-5">
+    <div className="max-w-6xl mx-auto">
+      <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/")} className="text-slate-400 hover:text-slate-700 text-sm">← Quay lại</button>
+          <button onClick={() => navigate(isNew ? "/content/new" : "/")} className="text-slate-400 hover:text-slate-700 text-sm">← Quay lại</button>
           <h1 className="text-xl font-semibold">{isNew ? "Bài viết mới" : "Chi tiết bài viết"}</h1>
+          {channelBadge}
         </div>
         {item && <StatusBadge status={item.status} />}
       </div>
 
       {error && <div className="bg-red-50 text-red-700 text-sm rounded-lg px-3 py-2 mb-4 border border-red-100">{error}</div>}
 
-      {isNew && (
-        <div className="mb-5">
-          <p className="text-sm font-medium text-slate-600 mb-2">Chọn kênh đăng</p>
-          {channels.length === 0 ? (
-            <p className="text-sm text-slate-400">Chưa có kênh nào. Vào <b>Cài đặt</b> để thêm kênh Facebook / WordPress.</p>
-          ) : (
-            <div className="grid sm:grid-cols-2 gap-3">
-              {channels.map((c) => {
-                const t = channelTheme(c.type);
-                const active = channelId === c.id;
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => setChannelId(c.id)}
-                    className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${active ? "ring-2 shadow-sm" : "hover:border-slate-300"}`}
-                    style={active ? { borderColor: t.color, boxShadow: `0 0 0 3px ${t.ring}` } : { borderColor: "#e2e8f0" }}
-                  >
-                    <span className="inline-flex items-center justify-center rounded-lg text-white w-10 h-10 shrink-0" style={{ background: t.grad }}>
-                      <ChannelGlyph type={c.type} className="w-5 h-5" />
-                    </span>
-                    <div className="min-w-0">
-                      <div className="font-semibold text-slate-900 truncate">{c.name}</div>
-                      <div className="text-xs text-slate-500">{t.label}</div>
-                    </div>
-                    {active && <span className="ml-auto text-white text-xs rounded-full px-2 py-0.5" style={{ background: t.color }}>Đã chọn</span>}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {channelType ? (
-        canEdit ? (
+      {!channelType ? (
+        <p className="text-slate-400 text-sm">Đang tải…</p>
+      ) : isNew ? (
+        <>
           <div className="grid lg:grid-cols-2 gap-5 items-start">
-            {isWordPress ? <WordPressEditor /> : <FacebookEditor />}
-            <div className="lg:sticky lg:top-5"><Preview /></div>
+            <div>{editorNode}</div>
+            <div className="lg:sticky lg:top-5">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Xem trước {isWordPress ? "bài viết" : "bài đăng"}</p>
+              {previewNode}
+            </div>
           </div>
-        ) : (
-          <div className="max-w-2xl"><Preview /></div>
-        )
+          <div className="mt-5 flex flex-wrap gap-2">
+            <button onClick={() => handleSave(false)} disabled={saving} className="px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium hover:bg-slate-50">Lưu nháp</button>
+            <button onClick={() => handleSave(true)} disabled={saving} className="px-5 py-2 rounded-lg text-white text-sm font-medium shadow-sm" style={{ background: theme.color }}>Gửi duyệt</button>
+          </div>
+        </>
+      ) : item ? (
+        <div className="grid lg:grid-cols-[1fr_360px] gap-5 items-start">
+          <div>
+            {canEdit ? editorNode : (
+              <>
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Xem trước {isWordPress ? "bài viết" : "bài đăng"}</p>
+                {previewNode}
+              </>
+            )}
+          </div>
+          <aside className="lg:sticky lg:top-5">{feedbackPanel}</aside>
+        </div>
       ) : (
-        isNew && channels.length > 0 && (
-          <div className="rounded-xl border border-dashed border-slate-300 p-10 text-center text-slate-400">
-            Chọn một kênh ở trên để bắt đầu soạn bài.
-          </div>
-        )
-      )}
-
-      {/* actions */}
-      {channelType && (
-        <div className="mt-5 flex flex-wrap gap-2">
-          {canEdit && (
-            <>
-              <button onClick={() => handleSave(false)} disabled={saving} className="px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium hover:bg-slate-50">
-                Lưu nháp
-              </button>
-              <button onClick={() => handleSave(true)} disabled={saving} className="px-5 py-2 rounded-lg text-white text-sm font-medium shadow-sm" style={{ background: theme.color }}>
-                Gửi duyệt
-              </button>
-            </>
-          )}
-          {canRetry && (
-            <button onClick={handleRetryPublish} className="px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-medium">
-              Thử đăng lại
-            </button>
-          )}
-        </div>
-      )}
-
-      {canApprove && (
-        <div className="mt-4 bg-white rounded-xl border border-slate-200 p-5 max-w-2xl">
-          <h2 className="text-sm font-semibold mb-3">Duyệt bài</h2>
-          <label className="text-sm text-slate-600">Lên lịch đăng (bỏ trống = đăng ngay khi duyệt)</label>
-          <input type="datetime-local" className="w-full border border-slate-300 rounded-lg px-3 py-2 mt-1 mb-3" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
-          <div className="flex gap-2">
-            <button onClick={handleApprove} className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium">
-              Duyệt {scheduledAt ? "& lên lịch" : "& đăng ngay"}
-            </button>
-            <button onClick={handleRequestChanges} className="px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium">
-              Yêu cầu sửa
-            </button>
-          </div>
-        </div>
-      )}
-
-      {item?.external_post_id && item.status === "published" && (
-        <p className="text-xs text-slate-500 mt-3">ID bài đăng: {item.external_post_id}</p>
-      )}
-
-      {!isNew && item && (
-        <div className="bg-white rounded-xl border border-slate-200 p-5 mt-5 max-w-2xl">
-          <h2 className="text-sm font-semibold mb-3">Trao đổi / feedback</h2>
-          <div className="space-y-2 mb-3">
-            {item.comments?.length ? item.comments.map((c) => (
-              <div key={c.id} className="text-sm bg-slate-50 rounded-lg px-3 py-2">
-                <span className="font-medium">{c.user_name}: </span>{c.comment}
-              </div>
-            )) : <p className="text-sm text-slate-400">Chưa có bình luận.</p>}
-          </div>
-          <div className="flex gap-2">
-            <input className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Viết bình luận..." />
-            <button onClick={handleAddComment} className="px-3 py-2 rounded-lg border border-slate-300 text-sm">Gửi</button>
-          </div>
-        </div>
+        <p className="text-slate-400 text-sm">Đang tải…</p>
       )}
     </div>
   );
