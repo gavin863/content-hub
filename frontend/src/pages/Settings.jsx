@@ -58,19 +58,19 @@ export default function Settings() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-lg font-semibold">Cài đặt — {currentBrand.name}</h1>
+      <h1 className="text-lg font-semibold">Settings — {currentBrand.name}</h1>
       {error && <div className="bg-red-50 text-red-700 text-sm rounded-lg px-3 py-2">{error}</div>}
 
       <section className="bg-white rounded-xl border border-slate-200 p-5">
-        <h2 className="text-sm font-semibold mb-3">Kênh đăng bài</h2>
+        <h2 className="text-sm font-semibold mb-3">Channels</h2>
         <div className="space-y-2 mb-4">
           {channels.map((c) => (
             <div key={c.id} className="flex items-center justify-between text-sm bg-slate-50 rounded-lg px-3 py-2">
               <span>{c.name} <span className="text-slate-400">({c.type})</span></span>
-              <span className={c.active ? "text-green-600" : "text-slate-400"}>{c.active ? "Đang hoạt động" : "Tắt"}</span>
+              <span className={c.active ? "text-green-600" : "text-slate-400"}>{c.active ? "Active" : "Off"}</span>
             </div>
           ))}
-          {channels.length === 0 && <p className="text-sm text-slate-400">Chưa có kênh nào.</p>}
+          {channels.length === 0 && <p className="text-sm text-slate-400">No channels yet.</p>}
         </div>
 
         <form onSubmit={handleAddChannel} className="space-y-2 border-t border-slate-100 pt-4">
@@ -79,7 +79,7 @@ export default function Settings() {
               <option value="facebook">Facebook</option>
               <option value="wordpress">WordPress</option>
             </select>
-            <input placeholder="Tên gợi nhớ, vd: Nimbus Fanpage" className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" value={name} onChange={(e) => setName(e.target.value)} required />
+            <input placeholder="Friendly name, e.g. Nimbus Fanpage" className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
 
           {type === "facebook" ? (
@@ -94,12 +94,12 @@ export default function Settings() {
               <input placeholder="Application Password" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" value={wpAppPassword} onChange={(e) => setWpAppPassword(e.target.value)} required />
             </>
           )}
-          <button type="submit" className="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium">Thêm kênh</button>
+          <button type="submit" className="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium">Add channel</button>
         </form>
       </section>
 
       <section className="bg-white rounded-xl border border-slate-200 p-5">
-        <h2 className="text-sm font-semibold mb-3">Thành viên</h2>
+        <h2 className="text-sm font-semibold mb-3">Members</h2>
         <div className="space-y-2 mb-4">
           {team.map((m) => (
             <div key={m.id} className="flex items-center justify-between text-sm bg-slate-50 rounded-lg px-3 py-2">
@@ -107,17 +107,17 @@ export default function Settings() {
               <span className="text-slate-500">{m.role}</span>
             </div>
           ))}
-          {team.length === 0 && <p className="text-sm text-slate-400">Chưa có thành viên nào ngoài bạn.</p>}
+          {team.length === 0 && <p className="text-sm text-slate-400">No members yet besides you.</p>}
         </div>
 
         <form onSubmit={handleAddMember} className="flex gap-2 border-t border-slate-100 pt-4">
-          <input placeholder="Email (người đó phải đăng ký trước)" className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" value={memberEmail} onChange={(e) => setMemberEmail(e.target.value)} required />
+          <input placeholder="Email (they must sign up first)" className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" value={memberEmail} onChange={(e) => setMemberEmail(e.target.value)} required />
           <select className="border border-slate-300 rounded-lg px-3 py-2 text-sm" value={memberRole} onChange={(e) => setMemberRole(e.target.value)}>
             <option value="writer">Writer</option>
             <option value="approver">Approver</option>
             <option value="admin">Admin</option>
           </select>
-          <button type="submit" className="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium">Thêm</button>
+          <button type="submit" className="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium">Add</button>
         </form>
       </section>
     </div>

@@ -8,20 +8,20 @@ const STYLES = {
   failed: "bg-red-100 text-red-700"
 };
 
-const LABELS = {
-  draft: "Nháp",
-  pending_review: "Chờ duyệt",
-  changes_requested: "Cần sửa",
-  approved: "Đã duyệt",
-  scheduled: "Đã lên lịch",
-  published: "Đã đăng",
-  failed: "Lỗi đăng bài"
+export const STATUS_LABELS = {
+  draft: "Draft",
+  pending_review: "Pending review",
+  changes_requested: "Changes requested",
+  approved: "Approved",
+  scheduled: "Scheduled",
+  published: "Published",
+  failed: "Failed"
 };
 
 export default function StatusBadge({ status }) {
   return (
     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STYLES[status] || "bg-gray-100 text-gray-700"}`}>
-      {LABELS[status] || status}
+      {STATUS_LABELS[status] || status}
     </span>
   );
 }

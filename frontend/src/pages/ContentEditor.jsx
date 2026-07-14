@@ -7,16 +7,15 @@ import StatusBadge from "../components/StatusBadge.jsx";
 import RichTextEditor from "../components/RichTextEditor.jsx";
 import { channelTheme, ChannelGlyph, BrandAvatar } from "../components/BrandMark.jsx";
 
-// NOTE: all sub-views below are inline JSX (const nodes), NOT nested components.
-// Defining components inside the render remounts them every keystroke and drops
-// input focus after one character — so everything stays inline here.
+// NOTE: all sub-views below are inline JSX (const nodes), NOT nested components,
+// so inputs keep focus while typing (nested components remount every keystroke).
 export default function ContentEditor() {
   const { id, channelId } = useParams();
   const isNew = !!channelId; // /content/compose/:channelId → new draft on a fixed channel
   const { currentBrand, user } = useAuth();
   const navigate = useNavigate();
 
-  const [channel, setChannel] = useState(null); // resolved channel for a new draft
+  const [channel, setChannel] = useState(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [mediaUrl, setMediaUrl] = useState("");
@@ -29,19 +28,6 @@ export default function ContentEditor() {
   const [uploadError, setUploadError] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
   const bodyRef = useRef(null);
-
-  function insertEmoji(emoji) {
-    const ta = bodyRef.current;
-    if (!ta) { setBody((b) => b + emoji); return; }
-    const start = ta.selectionStart ?? body.length;
-    const end = ta.selectionEnd ?? body.length;
-    setBody((b) => b.slice(0, start) + emoji + b.slice(end));
-    requestAnimationFrame(() => {
-      ta.focus();
-      const pos = start + emoji.length;
-      ta.setSelectionRange(pos, pos);
-    });
-  }
 
   async function handleUploadMedia(e) {
     const file = e.target.files?.[0];
@@ -57,6 +43,15 @@ export default function ContentEditor() {
       setUploading(false);
       e.target.value = "";
     }
+  }
+
+  function insertEmoji(emoji) {
+    const ta = bodyRef.current;
+    if (!ta) { setBody((b) => b + emoji); return; }
+    const start = ta.selectionStart ?? body.length;
+    const end = ta.selectionEnd ?? body.length;
+    setBody((b) => b.slice(0, start) + emoji + b.slice(end));
+    requestAnimationFrame(() => { ta.focus(); const pos = start + emoji.length; ta.setSelectionRange(pos, pos); });
   }
 
   useEffect(() => {
@@ -143,7 +138,7 @@ export default function ContentEditor() {
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center gap-2 px-4 py-3 text-white rounded-t-xl" style={{ background: theme.grad }}>
         <ChannelGlyph type="facebook" className="w-5 h-5" />
-        <span className="font-semibold">Soạn bài Facebook</span>
+        <span className="font-semibold">Compose for Facebook</span>
         <span className="ml-auto text-xs opacity-90">{channelName}</span>
       </div>
       <div className="p-4">
@@ -151,7 +146,7 @@ export default function ContentEditor() {
           <BrandAvatar name={currentBrand?.name} size={40} />
           <div className="leading-tight">
             <div className="font-semibold text-[15px] text-slate-900">{currentBrand?.name}</div>
-            <span className="text-xs text-slate-600 bg-slate-100 rounded-full px-2 py-0.5 inline-flex items-center gap-1 mt-0.5">🌐 Công khai</span>
+            <span className="text-xs text-slate-600 bg-slate-100 rounded-full px-2 py-0.5 inline-flex items-center gap-1 mt-0.5">🌐 Public</span>
           </div>
         </div>
         <textarea
@@ -161,25 +156,17 @@ export default function ContentEditor() {
           value={body}
           onChange={(e) => setBody(e.target.value)}
           disabled={!canEdit}
-          placeholder="Bạn đang nghĩ gì?"
+          placeholder="What's on your mind?"
         />
         {canEdit && (
           <div className="flex justify-end">
             <div className="relative">
-              <button type="button" onClick={() => setShowEmoji((v) => !v)} className="text-xl w-9 h-9 rounded-full hover:bg-slate-100 flex items-center justify-center" title="Chèn emoji">😊</button>
+              <button type="button" onClick={() => setShowEmoji((v) => !v)} className="text-xl w-9 h-9 rounded-full hover:bg-slate-100 flex items-center justify-center" title="Insert emoji">😊</button>
               {showEmoji && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowEmoji(false)} />
                   <div className="absolute right-0 top-full mt-1 z-50">
-                    <EmojiPicker
-                      onEmojiClick={(e) => insertEmoji(e.emoji)}
-                      emojiStyle="native"
-                      height={360}
-                      width={320}
-                      lazyLoadEmojis
-                      previewConfig={{ showPreview: false }}
-                      searchPlaceholder="Tìm emoji…"
-                    />
+                    <EmojiPicker onEmojiClick={(e) => insertEmoji(e.emoji)} emojiStyle="native" height={360} width={320} lazyLoadEmojis previewConfig={{ showPreview: false }} />
                   </div>
                 </>
               )}
@@ -197,7 +184,7 @@ export default function ContentEditor() {
           ) : (
             <label className={`inline-flex items-center gap-2 text-sm font-medium border border-dashed border-slate-300 rounded-lg px-4 py-3 ${canEdit && !uploading ? "cursor-pointer text-slate-600 hover:bg-slate-50 hover:border-slate-400" : "text-slate-400"}`}>
               <span className="text-base">🖼️</span>
-              {uploading ? "Đang tải ảnh…" : "Thêm ảnh / video"}
+              {uploading ? "Uploading…" : "Add photo / video"}
               <input type="file" accept="image/*" className="hidden" onChange={handleUploadMedia} disabled={!canEdit || uploading} />
             </label>
           )}
@@ -208,10 +195,10 @@ export default function ContentEditor() {
   );
 
   const wordpressEditor = (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 text-white" style={{ background: theme.grad }}>
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex items-center gap-2 px-4 py-3 text-white rounded-t-xl" style={{ background: theme.grad }}>
         <ChannelGlyph type="wordpress" className="w-5 h-5" />
-        <span className="font-semibold">Soạn bài WordPress</span>
+        <span className="font-semibold">Compose for WordPress</span>
         <span className="ml-auto text-xs opacity-90">{channelName}</span>
       </div>
       <div className="p-4 space-y-3">
@@ -221,7 +208,7 @@ export default function ContentEditor() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           disabled={!canEdit}
-          placeholder="Tiêu đề bài viết…"
+          placeholder="Post title…"
         />
         <RichTextEditor value={body} onChange={setBody} editable={canEdit} />
       </div>
@@ -236,37 +223,36 @@ export default function ContentEditor() {
         <BrandAvatar name={currentBrand?.name} size={40} />
         <div className="leading-tight">
           <div className="font-semibold text-[15px] text-slate-900">{currentBrand?.name}</div>
-          <div className="text-xs text-slate-500 flex items-center gap-1">Vừa xong · <span>🌐</span> Công khai</div>
+          <div className="text-xs text-slate-500 flex items-center gap-1">Just now · <span>🌐</span> Public</div>
         </div>
       </div>
       <div className="px-3 pb-3 whitespace-pre-wrap text-[15px] text-slate-800 min-h-[40px]">
-        {body ? body : <span className="text-slate-400">Nội dung bài đăng sẽ hiển thị ở đây…</span>}
+        {body ? body : <span className="text-slate-400">Your post will appear here…</span>}
       </div>
       {mediaUrl ? (
         <img src={mediaUrl} alt="" className="w-full max-h-[360px] object-cover border-t border-slate-100" onError={(e) => (e.currentTarget.style.display = "none")} />
       ) : null}
       <div className="px-2 py-1 border-t border-slate-100 grid grid-cols-3 text-slate-500 text-sm font-medium">
-        <span className="flex items-center justify-center gap-1.5 py-2">👍 Thích</span>
-        <span className="flex items-center justify-center gap-1.5 py-2">💬 Bình luận</span>
-        <span className="flex items-center justify-center gap-1.5 py-2">↗ Chia sẻ</span>
+        <span className="flex items-center justify-center gap-1.5 py-2">👍 Like</span>
+        <span className="flex items-center justify-center gap-1.5 py-2">💬 Comment</span>
+        <span className="flex items-center justify-center gap-1.5 py-2">↗ Share</span>
       </div>
     </div>
   );
 
-  const wordpressPreview = (
+  // Read-only rendered WordPress article (used when reviewing, not editing).
+  const wordpressArticle = (
     <article className="rounded-xl border border-slate-200 bg-white shadow-sm p-6 sm:p-8">
       <h1 className="text-[26px] leading-tight font-bold text-slate-900" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-        {title || <span className="text-slate-400">Tiêu đề bài viết</span>}
+        {title || <span className="text-slate-400">Untitled</span>}
       </h1>
       <div className="flex items-center gap-2 text-xs text-slate-500 mt-2 mb-5 pb-4 border-b border-slate-100">
-        <BrandAvatar name={user?.name} size={22} grad="linear-gradient(135deg,#64748B,#334155)" />
-        bởi {user?.name} · hôm nay · <span className="inline-flex items-center gap-1" style={{ color: theme.color }}><ChannelGlyph type="wordpress" className="w-3.5 h-3.5" /> {channelName}</span>
+        <BrandAvatar name={item?.author_name || user?.name} size={22} grad="linear-gradient(135deg,#64748B,#334155)" />
+        by {item?.author_name || user?.name} · <span className="inline-flex items-center gap-1" style={{ color: theme.color }}><ChannelGlyph type="wordpress" className="w-3.5 h-3.5" /> {channelName}</span>
       </div>
-      <div className="richtext" dangerouslySetInnerHTML={{ __html: body || "<p style='color:#94a3b8'>Nội dung bài viết sẽ hiển thị ở đây…</p>" }} />
+      <div className="richtext" dangerouslySetInnerHTML={{ __html: body || "<p style='color:#94a3b8'>(empty)</p>" }} />
     </article>
   );
-
-  const previewNode = isWordPress ? wordpressPreview : facebookPreview;
 
   const channelBadge = channelType ? (
     <span className="inline-flex items-center gap-2 rounded-full pl-1 pr-3 py-1 text-sm font-medium" style={{ background: theme.soft, color: theme.color }}>
@@ -277,34 +263,33 @@ export default function ContentEditor() {
     </span>
   ) : null;
 
-  // Feedback / action panel shown on the RIGHT for an existing post.
   const feedbackPanel = (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
       {(canEdit || canApprove || canRetry) && (
         <div className="p-4 border-b border-slate-100 space-y-3">
           {canEdit && (
             <div className="flex gap-2">
-              <button onClick={() => handleSave(false)} disabled={saving} className="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium hover:bg-slate-50">Lưu nháp</button>
-              <button onClick={() => handleSave(true)} disabled={saving} className="flex-1 px-4 py-2 rounded-lg text-white text-sm font-medium shadow-sm" style={{ background: theme.color }}>Gửi duyệt</button>
+              <button onClick={() => handleSave(false)} disabled={saving} className="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium hover:bg-slate-50">Save draft</button>
+              <button onClick={() => handleSave(true)} disabled={saving} className="flex-1 px-4 py-2 rounded-lg text-white text-sm font-medium shadow-sm" style={{ background: theme.color }}>Submit for review</button>
             </div>
           )}
           {canApprove && (
             <>
               <div>
-                <label className="text-xs font-medium text-slate-500">Lên lịch (bỏ trống = đăng ngay)</label>
+                <label className="text-xs font-medium text-slate-500">Schedule (leave empty = publish now)</label>
                 <input type="datetime-local" className="w-full border border-slate-300 rounded-lg px-3 py-2 mt-1 text-sm" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
               </div>
               <div className="flex gap-2">
-                <button onClick={handleApprove} className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium">Duyệt {scheduledAt ? "& lên lịch" : "& đăng"}</button>
-                <button onClick={handleRequestChanges} className="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium">Yêu cầu sửa</button>
+                <button onClick={handleApprove} className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium">Approve {scheduledAt ? "& schedule" : "& publish"}</button>
+                <button onClick={handleRequestChanges} className="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium">Request changes</button>
               </div>
             </>
           )}
           {canRetry && (
-            <button onClick={handleRetryPublish} className="w-full px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-medium">Thử đăng lại</button>
+            <button onClick={handleRetryPublish} className="w-full px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-medium">Retry publish</button>
           )}
           {item?.external_post_id && item.status === "published" && (
-            <p className="text-xs text-slate-500">Đã đăng · ID: {item.external_post_id}</p>
+            <p className="text-xs text-slate-500">Published · ID: {item.external_post_id}</p>
           )}
         </div>
       )}
@@ -322,13 +307,20 @@ export default function ContentEditor() {
                 <div className="text-sm bg-slate-50 rounded-lg px-3 py-2 text-slate-800 break-words">{c.comment}</div>
               </div>
             </div>
-          )) : <p className="text-sm text-slate-400">Chưa có bình luận nào.</p>}
+          )) : <p className="text-sm text-slate-400">No comments yet.</p>}
         </div>
         <div className="flex gap-2">
-          <input className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Nói gì đó…" onKeyDown={(e) => { if (e.key === "Enter") handleAddComment(); }} />
-          <button onClick={handleAddComment} className="px-3 py-2 rounded-lg bg-slate-900 text-white text-sm">Gửi</button>
+          <input className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Say something…" onKeyDown={(e) => { if (e.key === "Enter") handleAddComment(); }} />
+          <button onClick={handleAddComment} className="px-3 py-2 rounded-lg bg-slate-900 text-white text-sm">Send</button>
         </div>
       </div>
+    </div>
+  );
+
+  const actionsRow = (
+    <div className="mt-5 flex flex-wrap gap-2">
+      <button onClick={() => handleSave(false)} disabled={saving} className="px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium hover:bg-slate-50">Save draft</button>
+      <button onClick={() => handleSave(true)} disabled={saving} className="px-5 py-2 rounded-lg text-white text-sm font-medium shadow-sm" style={{ background: theme.color }}>Submit for review</button>
     </div>
   );
 
@@ -338,8 +330,8 @@ export default function ContentEditor() {
     <div className="max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(isNew ? "/content/new" : "/")} className="text-slate-400 hover:text-slate-700 text-sm">← Quay lại</button>
-          <h1 className="text-xl font-semibold">{isNew ? "Bài viết mới" : "Chi tiết bài viết"}</h1>
+          <button onClick={() => navigate(isNew ? "/content/new" : "/")} className="text-slate-400 hover:text-slate-700 text-sm">← Back</button>
+          <h1 className="text-xl font-semibold">{isNew ? "New post" : "Post details"}</h1>
           {channelBadge}
         </div>
         {item && <StatusBadge status={item.status} />}
@@ -348,35 +340,39 @@ export default function ContentEditor() {
       {error && <div className="bg-red-50 text-red-700 text-sm rounded-lg px-3 py-2 mb-4 border border-red-100">{error}</div>}
 
       {!channelType ? (
-        <p className="text-slate-400 text-sm">Đang tải…</p>
+        <p className="text-slate-400 text-sm">Loading…</p>
       ) : isNew ? (
-        <>
-          <div className="grid lg:grid-cols-2 gap-5 items-start">
-            <div>{editorNode}</div>
-            <div className="lg:sticky lg:top-5">
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Xem trước {isWordPress ? "bài viết" : "bài đăng"}</p>
-              {previewNode}
+        isWordPress ? (
+          <>
+            {editorNode}
+            {actionsRow}
+          </>
+        ) : (
+          <>
+            <div className="grid lg:grid-cols-2 gap-5 items-start">
+              <div>{editorNode}</div>
+              <div className="lg:sticky lg:top-5">
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Preview</p>
+                {facebookPreview}
+              </div>
             </div>
-          </div>
-          <div className="mt-5 flex flex-wrap gap-2">
-            <button onClick={() => handleSave(false)} disabled={saving} className="px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium hover:bg-slate-50">Lưu nháp</button>
-            <button onClick={() => handleSave(true)} disabled={saving} className="px-5 py-2 rounded-lg text-white text-sm font-medium shadow-sm" style={{ background: theme.color }}>Gửi duyệt</button>
-          </div>
-        </>
+            {actionsRow}
+          </>
+        )
       ) : item ? (
         <div className="grid lg:grid-cols-[1fr_360px] gap-5 items-start">
           <div>
-            {canEdit ? editorNode : (
+            {canEdit ? editorNode : isWordPress ? wordpressArticle : (
               <>
-                <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Xem trước {isWordPress ? "bài viết" : "bài đăng"}</p>
-                {previewNode}
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Preview</p>
+                {facebookPreview}
               </>
             )}
           </div>
           <aside className="lg:sticky lg:top-5">{feedbackPanel}</aside>
         </div>
       ) : (
-        <p className="text-slate-400 text-sm">Đang tải…</p>
+        <p className="text-slate-400 text-sm">Loading…</p>
       )}
     </div>
   );

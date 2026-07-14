@@ -7,8 +7,8 @@ import { stripHtml } from "../utils/text.js";
 
 const STATUSES = ["", "draft", "pending_review", "changes_requested", "approved", "scheduled", "published", "failed"];
 const STATUS_LABELS = {
-  "": "Tất cả", draft: "Nháp", pending_review: "Chờ duyệt", changes_requested: "Cần sửa",
-  approved: "Đã duyệt", scheduled: "Đã lên lịch", published: "Đã đăng", failed: "Lỗi"
+  "": "All", draft: "Draft", pending_review: "Pending", changes_requested: "Changes",
+  approved: "Approved", scheduled: "Scheduled", published: "Published", failed: "Failed"
 };
 
 export default function Dashboard() {
@@ -23,14 +23,14 @@ export default function Dashboard() {
     api.content(currentBrand.id, status).then(setItems).finally(() => setLoading(false));
   }, [currentBrand, status]);
 
-  if (!currentBrand) return <p className="text-slate-500">Bạn chưa được thêm vào brand nào.</p>;
+  if (!currentBrand) return <p className="text-slate-500">You're not part of any brand yet.</p>;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-semibold">Nội dung — {currentBrand.name}</h1>
+        <h1 className="text-lg font-semibold">Content — {currentBrand.name}</h1>
         <Link to="/content/new" className="bg-slate-900 text-white text-sm px-4 py-2 rounded-lg font-medium">
-          + Bài viết mới
+          + New post
         </Link>
       </div>
 
@@ -47,9 +47,9 @@ export default function Dashboard() {
       </div>
 
       {loading ? (
-        <p className="text-slate-400 text-sm">Đang tải...</p>
+        <p className="text-slate-400 text-sm">Loading…</p>
       ) : items.length === 0 ? (
-        <p className="text-slate-400 text-sm">Chưa có nội dung nào.</p>
+        <p className="text-slate-400 text-sm">No content yet.</p>
       ) : (
         <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
           {items.map((item) => (
@@ -57,7 +57,7 @@ export default function Dashboard() {
               <div className="min-w-0">
                 <p className="font-medium text-slate-900 truncate">{item.title || stripHtml(item.body).slice(0, 60)}</p>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  {item.channel_name} · {item.channel_type} · tác giả {item.author_name}
+                  {item.channel_name} · {item.channel_type} · by {item.author_name}
                 </p>
               </div>
               <StatusBadge status={item.status} />

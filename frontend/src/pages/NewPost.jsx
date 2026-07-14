@@ -19,12 +19,12 @@ export default function NewPost() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate("/")} className="text-slate-400 hover:text-slate-700 text-sm">← Quay lại</button>
-        <h1 className="text-xl font-semibold">Bài viết mới</h1>
+        <button onClick={() => navigate("/")} className="text-slate-400 hover:text-slate-700 text-sm">← Back</button>
+        <h1 className="text-xl font-semibold">New post</h1>
       </div>
-      <p className="text-sm font-medium text-slate-600 mb-3">Chọn kênh muốn đăng — mỗi kênh có trình soạn thảo riêng.</p>
+      <p className="text-sm font-medium text-slate-600 mb-3">Choose a channel — each one has its own composer.</p>
       {channels.length === 0 ? (
-        <p className="text-sm text-slate-400">Chưa có kênh nào. Vào <b>Cài đặt</b> để thêm kênh Facebook / WordPress.</p>
+        <p className="text-sm text-slate-400">No channels yet. Go to <b>Settings</b> to add a Facebook / WordPress channel.</p>
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
           {channels.map((c) => {
@@ -40,7 +40,7 @@ export default function NewPost() {
                 </span>
                 <div className="min-w-0">
                   <div className="font-semibold text-slate-900 text-lg truncate">{c.name}</div>
-                  <div className="text-sm text-slate-500">{t.label} · soạn &amp; đăng</div>
+                  <div className="text-sm text-slate-500">{t.label} · compose &amp; publish</div>
                 </div>
                 <span className="ml-auto text-slate-300 group-hover:text-slate-600 text-xl">→</span>
               </button>

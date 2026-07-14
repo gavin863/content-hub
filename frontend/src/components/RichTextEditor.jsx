@@ -46,7 +46,7 @@ export default function RichTextEditor({ value, onChange, editable = true }) {
 
   const setLink = () => {
     const prev = editor.getAttributes("link").href || "";
-    const url = window.prompt("Nhập URL liên kết (để trống để xoá link):", prev);
+    const url = window.prompt("Enter link URL (leave empty to remove):", prev);
     if (url === null) return;
     if (url === "") return editor.chain().focus().extendMarkRange("link").unsetLink().run();
     editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
@@ -60,7 +60,7 @@ export default function RichTextEditor({ value, onChange, editable = true }) {
       const url = await api.uploadFile(file);
       editor.chain().focus().setImage({ src: url }).run();
     } catch (err) {
-      window.alert(err.message || "Tải ảnh thất bại");
+      window.alert(err.message || "Upload failed");
     } finally {
       setUploadingImg(false);
       e.target.value = "";
@@ -79,12 +79,12 @@ export default function RichTextEditor({ value, onChange, editable = true }) {
           <button type="button" className={btn(editor.isActive("italic"))} onClick={() => editor.chain().focus().toggleItalic().run()}><i>I</i></button>
           <button type="button" className={btn(editor.isActive("strike"))} onClick={() => editor.chain().focus().toggleStrike().run()}><s>S</s></button>
           <span className="w-px bg-slate-300 mx-1" />
-          <button type="button" className={btn(editor.isActive("bulletList"))} onClick={() => editor.chain().focus().toggleBulletList().run()}>• Danh sách</button>
-          <button type="button" className={btn(editor.isActive("orderedList"))} onClick={() => editor.chain().focus().toggleOrderedList().run()}>1. Số</button>
-          <button type="button" className={btn(editor.isActive("blockquote"))} onClick={() => editor.chain().focus().toggleBlockquote().run()}>❝ Trích</button>
+          <button type="button" className={btn(editor.isActive("bulletList"))} onClick={() => editor.chain().focus().toggleBulletList().run()}>• List</button>
+          <button type="button" className={btn(editor.isActive("orderedList"))} onClick={() => editor.chain().focus().toggleOrderedList().run()}>1. Numbered</button>
+          <button type="button" className={btn(editor.isActive("blockquote"))} onClick={() => editor.chain().focus().toggleBlockquote().run()}>❝ Quote</button>
           <span className="w-px bg-slate-300 mx-1" />
           <button type="button" className={btn(editor.isActive("link"))} onClick={setLink}>🔗 Link</button>
-          <button type="button" className={btn(false)} onClick={() => fileRef.current?.click()} disabled={uploadingImg}>{uploadingImg ? "⏳ Đang tải…" : "🖼 Ảnh"}</button>
+          <button type="button" className={btn(false)} onClick={() => fileRef.current?.click()} disabled={uploadingImg}>{uploadingImg ? "⏳ Uploading…" : "🖼 Image"}</button>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onImageSelected} />
           <span className="w-px bg-slate-300 mx-1" />
           <button type="button" className={btn(false)} onClick={() => editor.chain().focus().undo().run()}>↶</button>

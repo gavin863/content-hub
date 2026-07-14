@@ -15,10 +15,10 @@ export default function Layout({ children }) {
           <div className="flex items-center gap-6">
             <span className="font-semibold text-slate-900">Content Hub</span>
             <nav className="flex gap-1">
-              <NavLink to="/" end className={linkClass}>Bảng nội dung</NavLink>
-              <NavLink to="/calendar" className={linkClass}>Lịch</NavLink>
-              <NavLink to="/approvals" className={linkClass}>Duyệt bài</NavLink>
-              <NavLink to="/settings" className={linkClass}>Cài đặt</NavLink>
+              <NavLink to="/" end className={linkClass}>Content</NavLink>
+              <NavLink to="/calendar" className={linkClass}>Calendar</NavLink>
+              <NavLink to="/approvals" className={linkClass}>Approvals</NavLink>
+              <NavLink to="/settings" className={linkClass}>Settings</NavLink>
             </nav>
           </div>
           <div className="flex items-center gap-3">
@@ -38,7 +38,7 @@ export default function Layout({ children }) {
               className="text-sm text-slate-500 hover:text-slate-900"
               onClick={() => { logout(); navigate("/login"); }}
             >
-              Đăng xuất
+              Log out
             </button>
           </div>
         </div>
