@@ -151,11 +151,21 @@ export default function ContentEditor() {
     } catch (err) { setError(err.message); }
   }
 
+  async function handleDelete() {
+    if (!window.confirm("Delete this post? This cannot be undone.")) return;
+    setError("");
+    try {
+      await api.deleteContent(id);
+      navigate("/");
+    } catch (err) { setError(err.message); }
+  }
+
   const canEdit = isNew || (item && ["draft", "changes_requested"].includes(item.status) && item.author_id === user.id);
   const isApprover = user?.is_super_admin || ["approver", "admin"].includes(currentBrand?.role);
   const canReview = isApprover && item && item.status === "pending_review";
   const canManagePublish = isApprover && item && ["approved", "scheduled"].includes(item.status);
   const canRetry = isApprover && item && item.status === "failed";
+  const canDelete = !isNew && item && (item.author_id === user.id || isApprover);
 
   const channelType = isNew ? channel?.type : item?.channel_type;
   const channelName = isNew ? channel?.name : item?.channel_name;
@@ -370,6 +380,9 @@ export default function ContentEditor() {
           <input className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Say something…" onKeyDown={(e) => { if (e.key === "Enter") handleAddComment(); }} />
           <button onClick={handleAddComment} className="px-3 py-2 rounded-lg bg-slate-900 text-white text-sm">Send</button>
         </div>
+        {canDelete && (
+          <button onClick={handleDelete} className="mt-4 w-full text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg py-2 border border-transparent hover:border-red-100">🗑 Delete post</button>
+        )}
       </div>
     </div>
   );

@@ -56,7 +56,8 @@ export const api = {
   unscheduleContent: (id) => request(`/content/${id}/unschedule`, { method: "POST" }),
   requestChanges: (id, reason) => request(`/content/${id}/request-changes`, { method: "POST", body: { reason } }),
   addComment: (id, comment) => request(`/content/${id}/comments`, { method: "POST", body: { comment } }),
-  publishNow: (id) => request(`/content/${id}/publish-now`, { method: "POST" })
+  publishNow: (id) => request(`/content/${id}/publish-now`, { method: "POST" }),
+  deleteContent: (id) => request(`/content/${id}`, { method: "DELETE" })
 };
 
 export function saveSession(token, user) {

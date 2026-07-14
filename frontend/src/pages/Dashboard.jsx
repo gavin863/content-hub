@@ -12,16 +12,29 @@ const STATUS_LABELS = {
 };
 
 export default function Dashboard() {
-  const { currentBrand } = useAuth();
+  const { currentBrand, user } = useAuth();
   const [items, setItems] = useState([]);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
+  const isApprover = user?.is_super_admin || ["approver", "admin"].includes(currentBrand?.role);
 
   useEffect(() => {
     if (!currentBrand) return;
     setLoading(true);
     api.content(currentBrand.id, status).then(setItems).finally(() => setLoading(false));
   }, [currentBrand, status]);
+
+  async function handleDelete(e, item) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm("Delete this post? This cannot be undone.")) return;
+    try {
+      await api.deleteContent(item.id);
+      setItems((its) => its.filter((x) => x.id !== item.id));
+    } catch (err) {
+      window.alert(err.message || "Delete failed");
+    }
+  }
 
   if (!currentBrand) return <p className="text-slate-500">You're not part of any brand yet.</p>;
 
@@ -60,7 +73,12 @@ export default function Dashboard() {
                   {item.channel_name} · {item.channel_type} · by {item.author_name}
                 </p>
               </div>
-              <StatusBadge status={item.status} />
+              <div className="flex items-center gap-2 shrink-0">
+                <StatusBadge status={item.status} />
+                {(item.author_id === user?.id || isApprover) && (
+                  <button onClick={(e) => handleDelete(e, item)} title="Delete" className="text-slate-300 hover:text-red-500 text-sm px-1">🗑</button>
+                )}
+              </div>
             </Link>
           ))}
         </div>

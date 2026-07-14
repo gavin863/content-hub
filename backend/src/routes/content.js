@@ -186,6 +186,24 @@ router.post("/:id/comments", requireAuth, async (req, res) => {
   res.json(rows[0]);
 });
 
+// Delete a content item (comments & publish logs cascade). Allowed for the
+// author, a super admin, or an approver/admin of the brand.
+router.delete("/:id", requireAuth, async (req, res) => {
+  const { rows } = await query("SELECT * FROM content_items WHERE id = $1", [req.params.id]);
+  if (!rows.length) return res.status(404).json({ error: "Not found" });
+  const item = rows[0];
+
+  if (item.author_id === req.user.id || req.user.is_super_admin) {
+    await query("DELETE FROM content_items WHERE id = $1", [req.params.id]);
+    return res.json({ ok: true });
+  }
+  const gate = await requireBrandRole("approver");
+  await gate({ ...req, params: { brandId: item.brand_id } }, res, async () => {
+    await query("DELETE FROM content_items WHERE id = $1", [req.params.id]);
+    res.json({ ok: true });
+  });
+});
+
 // Manually retry a publish (e.g. after a failure)
 router.post("/:id/publish-now", requireAuth, async (req, res) => {
   const { rows: itemRows } = await query("SELECT * FROM content_items WHERE id = $1", [req.params.id]);
