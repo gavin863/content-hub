@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../api/client.js";
 import StatusBadge from "../components/StatusBadge.jsx";
+import RichTextEditor from "../components/RichTextEditor.jsx";
 
 export default function ContentEditor() {
   const { id } = useParams();
@@ -102,6 +103,13 @@ export default function ContentEditor() {
   const canApprove = !isNew && item && item.status === "pending_review";
   const canRetry = !isNew && item && item.status === "failed";
 
+  // The editor adapts to the channel: WordPress gets a rich-text (HTML) editor,
+  // Facebook gets a plain-text box (FB doesn't render HTML).
+  const channelType = isNew
+    ? channels.find((c) => c.id === channelId)?.type
+    : item?.channel_type;
+  const isWordPress = channelType === "wordpress";
+
   return (
     <div className="max-w-2xl">
       <div className="flex items-center justify-between mb-4">
@@ -124,20 +132,42 @@ export default function ContentEditor() {
           </div>
         )}
 
+        {channelType && (
+          <p className="text-xs text-slate-500 -mb-1">
+            {isWordPress
+              ? "Kênh WordPress — soạn thảo đầy đủ định dạng (tiêu đề, in đậm, danh sách, link, ảnh)."
+              : "Kênh Facebook — chỉ text thuần, xuống dòng được; Facebook không hỗ trợ định dạng."}
+          </p>
+        )}
+
         <div>
-          <label className="text-sm text-slate-600">Tiêu đề (dùng cho WordPress, không bắt buộc với Facebook)</label>
+          <label className="text-sm text-slate-600">
+            {isWordPress ? "Tiêu đề bài viết (WordPress)" : "Tiêu đề (không bắt buộc với Facebook)"}
+          </label>
           <input className="w-full border border-slate-300 rounded-lg px-3 py-2 mt-1" value={title} onChange={(e) => setTitle(e.target.value)} disabled={!canEdit} />
         </div>
 
         <div>
           <label className="text-sm text-slate-600">Nội dung</label>
-          <textarea rows={8} className="w-full border border-slate-300 rounded-lg px-3 py-2 mt-1" value={body} onChange={(e) => setBody(e.target.value)} disabled={!canEdit} />
+          {isWordPress ? (
+            canEdit ? (
+              <div className="mt-1">
+                <RichTextEditor value={body} onChange={setBody} editable />
+              </div>
+            ) : (
+              <div className="richtext border border-slate-200 rounded-lg px-3 py-2 mt-1 bg-slate-50" dangerouslySetInnerHTML={{ __html: body || "<p class='text-slate-400'>(trống)</p>" }} />
+            )
+          ) : (
+            <textarea rows={8} className="w-full border border-slate-300 rounded-lg px-3 py-2 mt-1" value={body} onChange={(e) => setBody(e.target.value)} disabled={!canEdit} placeholder="Nội dung bài đăng..." />
+          )}
         </div>
 
-        <div>
-          <label className="text-sm text-slate-600">Ảnh (URL, tùy chọn)</label>
-          <input className="w-full border border-slate-300 rounded-lg px-3 py-2 mt-1" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} disabled={!canEdit} placeholder="https://..." />
-        </div>
+        {!isWordPress && (
+          <div>
+            <label className="text-sm text-slate-600">Ảnh (URL, tùy chọn) — đăng kèm ảnh lên Facebook</label>
+            <input className="w-full border border-slate-300 rounded-lg px-3 py-2 mt-1" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} disabled={!canEdit} placeholder="https://..." />
+          </div>
+        )}
 
         {canEdit && (
           <div className="flex gap-2 pt-2">

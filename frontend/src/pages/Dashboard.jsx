@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../api/client.js";
 import StatusBadge from "../components/StatusBadge.jsx";
+import { stripHtml } from "../utils/text.js";
 
 const STATUSES = ["", "draft", "pending_review", "changes_requested", "approved", "scheduled", "published", "failed"];
 const STATUS_LABELS = {
@@ -54,7 +55,7 @@ export default function Dashboard() {
           {items.map((item) => (
             <Link key={item.id} to={`/content/${item.id}`} className="flex items-center justify-between px-4 py-3 hover:bg-slate-50">
               <div className="min-w-0">
-                <p className="font-medium text-slate-900 truncate">{item.title || item.body.slice(0, 60)}</p>
+                <p className="font-medium text-slate-900 truncate">{item.title || stripHtml(item.body).slice(0, 60)}</p>
                 <p className="text-xs text-slate-500 mt-0.5">
                   {item.channel_name} · {item.channel_type} · tác giả {item.author_name}
                 </p>
