@@ -29,6 +29,14 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || "Server error" });
 });
 
+// In Express 4 an async route handler that rejects isn't caught by the error
+// middleware — it surfaces as an unhandledRejection which, by default, would
+// terminate the process. Log it and keep the server alive instead of letting a
+// single bad request take down the whole API for everyone.
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled promise rejection:", reason);
+});
+
 const port = process.env.PORT || 4000;
 
 runMigrations()

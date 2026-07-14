@@ -12,10 +12,12 @@ const roleGate = (min) => async (req, res, next) => (await requireBrandRole(min)
 router.get("/", roleGate("writer"), async (req, res) => {
   const { brandId, status } = req.query;
   const params = [brandId];
-  let where = "brand_id = $1";
+  // Qualify columns: content_items and channels both have brand_id, so an
+  // unqualified reference is ambiguous (Postgres error 42702).
+  let where = "ci.brand_id = $1";
   if (status) {
     params.push(status);
-    where += ` AND status = $${params.length}`;
+    where += ` AND ci.status = $${params.length}`;
   }
   const { rows } = await query(
     `SELECT ci.*, u.name as author_name, c.name as channel_name, c.type as channel_type
