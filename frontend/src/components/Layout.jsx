@@ -1,6 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
-import { NimbusLogo } from "./BrandMark.jsx";
 
 export default function Layout({ children }) {
   const { user, brands, currentBrand, switchBrand, logout } = useAuth();
@@ -14,12 +13,10 @@ export default function Layout({ children }) {
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <NimbusLogo className="w-8 h-8" />
-              <div className="leading-none">
-                <div className="font-extrabold tracking-tight text-slate-900 text-[16px]">NIMBUS</div>
-                <div className="text-[10px] text-slate-400 tracking-wide uppercase">Content Hub</div>
-              </div>
+            <div className="flex items-center gap-2.5">
+              <img src="/nimbus-logo.png" alt="Nimbus" className="h-8 w-auto" />
+              <span className="hidden sm:inline text-slate-300">|</span>
+              <span className="hidden sm:inline text-sm font-medium text-slate-500">Content Hub</span>
             </div>
             <nav className="flex gap-1">
               <NavLink to="/" end className={linkClass}>Content</NavLink>

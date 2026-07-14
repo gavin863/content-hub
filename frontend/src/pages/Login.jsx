@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
-import { NimbusLogo } from "../components/BrandMark.jsx";
 
 export default function Login() {
   const [mode, setMode] = useState("login");
@@ -30,13 +29,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 w-full max-w-sm">
-        <div className="flex items-center gap-2 mb-1">
-          <NimbusLogo className="w-9 h-9" />
-          <div className="leading-none">
-            <div className="font-extrabold tracking-tight text-slate-900 text-lg">NIMBUS</div>
-            <div className="text-[10px] text-slate-400 tracking-wide uppercase">Content Hub</div>
-          </div>
-        </div>
+        <img src="/nimbus-logo.png" alt="Nimbus" className="h-10 w-auto mb-1" />
         <p className="text-sm text-slate-500 mb-6 mt-3">
           {mode === "login" ? "Sign in to continue" : "Create a new account (the first account becomes super admin)"}
         </p>
