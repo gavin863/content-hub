@@ -16,6 +16,7 @@ export default function Layout({ children }) {
             <span className="font-semibold text-slate-900">Content Hub</span>
             <nav className="flex gap-1">
               <NavLink to="/" end className={linkClass}>Bảng nội dung</NavLink>
+              <NavLink to="/calendar" className={linkClass}>Lịch</NavLink>
               <NavLink to="/approvals" className={linkClass}>Duyệt bài</NavLink>
               <NavLink to="/settings" className={linkClass}>Cài đặt</NavLink>
             </nav>

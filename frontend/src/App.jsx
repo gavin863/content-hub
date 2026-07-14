@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import Layout from "./components/Layout.jsx";
 import Login from "./pages/Login.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
+import Calendar from "./pages/Calendar.jsx";
 import NewPost from "./pages/NewPost.jsx";
 import ContentEditor from "./pages/ContentEditor.jsx";
 import ApprovalQueue from "./pages/ApprovalQueue.jsx";
@@ -20,6 +21,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<Private><Dashboard /></Private>} />
+      <Route path="/calendar" element={<Private><Calendar /></Private>} />
       <Route path="/content/new" element={<Private><NewPost /></Private>} />
       <Route path="/content/compose/:channelId" element={<Private><ContentEditor /></Private>} />
       <Route path="/content/:id" element={<Private><ContentEditor /></Private>} />
