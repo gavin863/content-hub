@@ -5,6 +5,7 @@ import authRoutes from "./routes/auth.js";
 import brandRoutes from "./routes/brands.js";
 import contentRoutes from "./routes/content.js";
 import { startScheduler } from "./services/scheduler.js";
+import { runMigrations } from "./migrate.js";
 
 const app = express();
 app.use(cors({ origin: (process.env.CORS_ORIGIN || "*").split(",") }));
@@ -22,7 +23,15 @@ app.use((err, req, res, next) => {
 });
 
 const port = process.env.PORT || 4000;
-app.listen(port, () => {
-  console.log(`Content Hub API listening on :${port}`);
-  startScheduler();
-});
+
+runMigrations()
+  .then(() => {
+    app.listen(port, () => {
+      console.log(`Content Hub API listening on :${port}`);
+      startScheduler();
+    });
+  })
+  .catch((err) => {
+    console.error("Failed to run migrations, aborting startup:", err);
+    process.exit(1);
+  });
