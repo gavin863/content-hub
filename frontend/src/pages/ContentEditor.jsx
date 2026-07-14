@@ -7,6 +7,14 @@ import StatusBadge from "../components/StatusBadge.jsx";
 import RichTextEditor from "../components/RichTextEditor.jsx";
 import { channelTheme, ChannelGlyph, BrandAvatar } from "../components/BrandMark.jsx";
 
+// ISO timestamp -> value for <input type="datetime-local"> (local time).
+const toLocalInput = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
 // NOTE: all sub-views below are inline JSX (const nodes), NOT nested components,
 // so inputs keep focus while typing (nested components remount every keystroke).
 export default function ContentEditor() {
@@ -67,6 +75,7 @@ export default function ContentEditor() {
       setBody(data.body);
       const mu = Array.isArray(data.media_urls) ? data.media_urls : [];
       setMediaUrl(mu[0] || "");
+      setScheduledAt(toLocalInput(data.scheduled_at));
     });
   }, [id, isNew]);
 
@@ -76,10 +85,11 @@ export default function ContentEditor() {
     try {
       let saved;
       const mediaUrls = mediaUrl ? [mediaUrl] : [];
+      const schedIso = scheduledAt ? new Date(scheduledAt).toISOString() : null;
       if (isNew) {
-        saved = await api.createContent({ brandId: currentBrand.id, channelId, title, body, mediaUrls });
+        saved = await api.createContent({ brandId: currentBrand.id, channelId, title, body, mediaUrls, scheduledAt: schedIso });
       } else {
-        saved = await api.updateContent(id, { title, body, mediaUrls });
+        saved = await api.updateContent(id, { title, body, mediaUrls, scheduledAt: schedIso });
       }
       if (andSubmit) saved = await api.submitContent(saved.id);
       navigate(`/content/${saved.id}`);
@@ -154,6 +164,14 @@ export default function ContentEditor() {
 
   // ---- inline nodes ----------------------------------------------------
 
+  const scheduleField = canEdit ? (
+    <div className="mt-3 border-t border-slate-100 pt-3">
+      <label className="text-xs font-medium text-slate-500">📅 Planned publish date (optional)</label>
+      <input type="datetime-local" className="block border border-slate-300 rounded-lg px-3 py-2 mt-1 text-sm" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
+      <p className="text-[11px] text-slate-400 mt-1">Auto-publishes at this time <b>once approved</b>. If it isn't approved by then, it won't go out.</p>
+    </div>
+  ) : null;
+
   const facebookEditor = (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center gap-2 px-4 py-3 text-white rounded-t-xl" style={{ background: theme.grad }}>
@@ -210,6 +228,7 @@ export default function ContentEditor() {
           )}
           {uploadError && <p className="text-xs text-red-600 mt-1">{uploadError}</p>}
         </div>
+        {scheduleField}
       </div>
     </div>
   );
@@ -231,6 +250,7 @@ export default function ContentEditor() {
           placeholder="Post title…"
         />
         <RichTextEditor value={body} onChange={setBody} editable={canEdit} />
+        {scheduleField}
       </div>
     </div>
   );
@@ -305,15 +325,15 @@ export default function ContentEditor() {
           {/* Step 2 (after approved): publish now OR schedule for later. */}
           {canManagePublish && (
             <>
-              {item.status === "scheduled" && (
+              {item.scheduled_at && (
                 <div className="text-xs bg-indigo-50 text-indigo-700 rounded-lg px-3 py-2 flex items-center justify-between">
-                  <span>⏰ Scheduled for {new Date(item.scheduled_at).toLocaleString()}</span>
-                  <button onClick={handleUnschedule} className="underline hover:no-underline">Cancel</button>
+                  <span>⏰ Auto-publishes {new Date(item.scheduled_at).toLocaleString()}</span>
+                  <button onClick={handleUnschedule} className="underline hover:no-underline">Clear</button>
                 </div>
               )}
               <button onClick={handleRetryPublish} className="w-full px-4 py-2 rounded-lg text-white text-sm font-medium" style={{ background: theme.color }}>Publish now</button>
               <div>
-                <label className="text-xs font-medium text-slate-500">{item.status === "scheduled" ? "Reschedule" : "Or schedule for later"}</label>
+                <label className="text-xs font-medium text-slate-500">{item.scheduled_at ? "Reschedule" : "Or schedule for later"}</label>
                 <div className="flex gap-2 mt-1">
                   <input type="datetime-local" className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
                   <button onClick={handleSchedule} className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium">{item.status === "scheduled" ? "Update" : "Schedule"}</button>

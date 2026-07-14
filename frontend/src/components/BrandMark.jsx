@@ -13,10 +13,10 @@ export const CHANNELS = {
   wordpress: {
     key: "wordpress",
     label: "WordPress",
-    color: "#0073AA",
-    ring: "rgba(0,115,170,0.15)",
-    soft: "#E7F1F6",
-    grad: "linear-gradient(135deg,#1FA0D6,#0073AA)"
+    color: "#1650C8",
+    ring: "rgba(22,80,200,0.18)",
+    soft: "#E8EFFE",
+    grad: "linear-gradient(135deg,#2A7FFF,#0E3EA8)"
   }
 };
 
@@ -44,6 +44,27 @@ export function ChannelGlyph({ type, className = "w-5 h-5" }) {
     );
   }
   return <span className={className}>◆</span>;
+}
+
+// Nimbus company logo mark (a blue blossom holding an "N"). Recreated as inline
+// SVG; swap for the real asset by dropping it in public/ and using an <img>.
+export function NimbusLogo({ className = "w-8 h-8" }) {
+  return (
+    <svg viewBox="0 0 120 120" className={className} aria-label="Nimbus" role="img">
+      <g fill="#1E7BFF">
+        <circle cx="40" cy="32" r="20" />
+        <circle cx="80" cy="32" r="20" />
+        <circle cx="30" cy="60" r="20" />
+        <circle cx="90" cy="60" r="20" />
+        <circle cx="40" cy="88" r="20" />
+        <circle cx="80" cy="88" r="20" />
+        <rect x="26" y="26" width="68" height="68" rx="22" />
+      </g>
+      <rect x="41" y="33" width="12" height="54" rx="3" fill="#fff" />
+      <rect x="67" y="33" width="12" height="54" rx="3" fill="#fff" />
+      <polygon points="41,33 53,33 79,87 67,87" fill="#fff" />
+    </svg>
+  );
 }
 
 // Circular brand avatar for the account/page (uses the brand's initial).
