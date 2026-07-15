@@ -46,6 +46,12 @@ export const api = {
   team: (brandId) => request(`/brands/${brandId}/team?brandId=${brandId}`),
   addTeamMember: (brandId, email, role) => request(`/brands/${brandId}/team`, { method: "POST", body: { brandId, email, role } }),
 
+  invites: (brandId) => request(`/brands/${brandId}/invites?brandId=${brandId}`),
+  createInvite: (brandId, email, role) => request(`/brands/${brandId}/invites`, { method: "POST", body: { brandId, email, role } }),
+  deleteInvite: (brandId, inviteId) => request(`/brands/${brandId}/invites/${inviteId}?brandId=${brandId}`, { method: "DELETE" }),
+  getInvite: (token) => request(`/invites/${token}`),
+  acceptInvite: (token, name, password) => request(`/invites/${token}/accept`, { method: "POST", body: { name, password } }),
+
   content: (brandId, status) => request(`/content?brandId=${brandId}${status ? `&status=${status}` : ""}`),
   contentItem: (id) => request(`/content/${id}`),
   createContent: (payload) => request("/content", { method: "POST", body: payload }),

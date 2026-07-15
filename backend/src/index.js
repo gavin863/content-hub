@@ -4,6 +4,7 @@ import cors from "cors";
 import { mkdirSync } from "fs";
 import authRoutes from "./routes/auth.js";
 import brandRoutes from "./routes/brands.js";
+import inviteRoutes from "./routes/invites.js";
 import contentRoutes from "./routes/content.js";
 import uploadRoutes, { UPLOAD_DIR } from "./routes/uploads.js";
 import { startScheduler } from "./services/scheduler.js";
@@ -32,6 +33,7 @@ app.use("/uploads", uploadRoutes);
 
 app.use("/auth", authRoutes);
 app.use("/brands", brandRoutes);
+app.use("/invites", inviteRoutes);
 app.use("/content", contentRoutes);
 
 app.use((err, req, res, next) => {

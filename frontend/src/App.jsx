@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import Layout from "./components/Layout.jsx";
 import Login from "./pages/Login.jsx";
+import AcceptInvite from "./pages/AcceptInvite.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Calendar from "./pages/Calendar.jsx";
 import NewPost from "./pages/NewPost.jsx";
@@ -20,6 +21,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/invite/:token" element={<AcceptInvite />} />
       <Route path="/" element={<Private><Dashboard /></Private>} />
       <Route path="/calendar" element={<Private><Calendar /></Private>} />
       <Route path="/content/new" element={<Private><NewPost /></Private>} />

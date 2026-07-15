@@ -83,6 +83,19 @@ CREATE TABLE IF NOT EXISTS publish_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- ============ INVITES (email invitations to join a brand) ============
+CREATE TABLE IF NOT EXISTS invites (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  brand_id UUID NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('writer', 'approver', 'admin')),
+  token TEXT UNIQUE NOT NULL,
+  invited_by UUID REFERENCES users(id),
+  accepted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_invites_token ON invites(token);
+
 -- ============ Seed: two brands to start ============
 INSERT INTO brands (name, slug) VALUES
   ('Nimbus Consulting', 'nimbus'),

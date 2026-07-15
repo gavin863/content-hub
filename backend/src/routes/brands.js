@@ -1,4 +1,5 @@
 import { Router } from "express";
+import crypto from "crypto";
 import { query } from "../db.js";
 import { requireAuth, requireBrandRole } from "../middleware/auth.js";
 
@@ -102,6 +103,68 @@ router.post("/:brandId/team", async (req, res, next) =>
      ON CONFLICT (user_id, brand_id) DO UPDATE SET role = $3`,
     [users[0].id, req.params.brandId, role]
   );
+  res.json({ ok: true });
+});
+
+// --- Invitations (email invites via a shareable link) ---
+
+// List pending invites for a brand
+router.get("/:brandId/invites", async (req, res, next) =>
+  (await requireBrandRole("admin"))(req, res, next)
+, async (req, res) => {
+  const { rows } = await query(
+    `SELECT i.id, i.email, i.role, i.token, i.created_at, u.name AS invited_by_name
+     FROM invites i LEFT JOIN users u ON u.id = i.invited_by
+     WHERE i.brand_id = $1 AND i.accepted_at IS NULL
+     ORDER BY i.created_at DESC`,
+    [req.params.brandId]
+  );
+  res.json(rows);
+});
+
+// Create an invite → returns a token the admin can share as a link
+router.post("/:brandId/invites", async (req, res, next) =>
+  (await requireBrandRole("admin"))(req, res, next)
+, async (req, res) => {
+  const { role } = req.body;
+  const email = (req.body.email || "").trim().toLowerCase();
+  if (!email) return res.status(400).json({ error: "email is required" });
+  if (!["writer", "approver", "admin"].includes(role)) {
+    return res.status(400).json({ error: "invalid role" });
+  }
+
+  // If the person is already a member, don't create a redundant invite.
+  const { rows: existing } = await query(
+    `SELECT 1 FROM user_brands ub JOIN users u ON u.id = ub.user_id
+     WHERE ub.brand_id = $1 AND lower(u.email) = $2`,
+    [req.params.brandId, email]
+  );
+  if (existing.length) return res.status(409).json({ error: "That person is already a member of this brand." });
+
+  const token = crypto.randomBytes(24).toString("hex");
+  // One outstanding invite per (brand, email): replace any prior unaccepted one.
+  await query(
+    `DELETE FROM invites WHERE brand_id = $1 AND lower(email) = $2 AND accepted_at IS NULL`,
+    [req.params.brandId, email]
+  );
+  const { rows } = await query(
+    `INSERT INTO invites (brand_id, email, role, token, invited_by)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, email, role, token, created_at`,
+    [req.params.brandId, email, role, token, req.user.id]
+  );
+  res.json(rows[0]);
+});
+
+// Revoke a pending invite
+router.delete("/:brandId/invites/:inviteId", async (req, res, next) =>
+  (await requireBrandRole("admin"))(req, res, next)
+, async (req, res) => {
+  const { rowCount } = await query(
+    `DELETE FROM invites WHERE id = $1 AND brand_id = $2 AND accepted_at IS NULL`,
+    [req.params.inviteId, req.params.brandId]
+  );
+  if (!rowCount) return res.status(404).json({ error: "Invite not found" });
   res.json({ ok: true });
 });
 

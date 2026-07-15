@@ -6,7 +6,9 @@ export default function Settings() {
   const { currentBrand } = useAuth();
   const [channels, setChannels] = useState([]);
   const [team, setTeam] = useState([]);
+  const [invites, setInvites] = useState([]);
   const [error, setError] = useState("");
+  const [copiedToken, setCopiedToken] = useState("");
 
   // new channel form
   const [type, setType] = useState("facebook");
@@ -17,14 +19,19 @@ export default function Settings() {
   const [wpUsername, setWpUsername] = useState("");
   const [wpAppPassword, setWpAppPassword] = useState("");
 
-  // new team member form
+  // invite form
   const [memberEmail, setMemberEmail] = useState("");
   const [memberRole, setMemberRole] = useState("writer");
+
+  function inviteLink(token) {
+    return `${window.location.origin}/invite/${token}`;
+  }
 
   function load() {
     if (!currentBrand) return;
     api.channels(currentBrand.id).then(setChannels);
     api.team(currentBrand.id).then(setTeam).catch(() => setTeam([]));
+    api.invites(currentBrand.id).then(setInvites).catch(() => setInvites([]));
   }
 
   useEffect(load, [currentBrand]);
@@ -42,12 +49,38 @@ export default function Settings() {
     }
   }
 
-  async function handleAddMember(e) {
+  async function handleInvite(e) {
     e.preventDefault();
     setError("");
     try {
-      await api.addTeamMember(currentBrand.id, memberEmail, memberRole);
+      const invite = await api.createInvite(currentBrand.id, memberEmail, memberRole);
       setMemberEmail("");
+      load();
+      // Copy the link straight to the clipboard so the admin can paste & send it.
+      try {
+        await navigator.clipboard.writeText(inviteLink(invite.token));
+        setCopiedToken(invite.token);
+        setTimeout(() => setCopiedToken(""), 2500);
+      } catch { /* clipboard blocked — link still shows in the list below */ }
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function copyInvite(token) {
+    try {
+      await navigator.clipboard.writeText(inviteLink(token));
+      setCopiedToken(token);
+      setTimeout(() => setCopiedToken(""), 2500);
+    } catch {
+      setError("Couldn't copy — select the link and copy it manually.");
+    }
+  }
+
+  async function revokeInvite(id) {
+    setError("");
+    try {
+      await api.deleteInvite(currentBrand.id, id);
       load();
     } catch (err) {
       setError(err.message);
@@ -110,15 +143,37 @@ export default function Settings() {
           {team.length === 0 && <p className="text-sm text-slate-400">No members yet besides you.</p>}
         </div>
 
-        <form onSubmit={handleAddMember} className="flex gap-2 border-t border-slate-100 pt-4">
-          <input placeholder="Email (they must sign up first)" className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" value={memberEmail} onChange={(e) => setMemberEmail(e.target.value)} required />
+        {invites.length > 0 && (
+          <div className="mb-4">
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Pending invitations</h3>
+            <div className="space-y-2">
+              {invites.map((inv) => (
+                <div key={inv.id} className="flex items-center justify-between gap-2 text-sm bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                  <span className="truncate">
+                    {inv.email} <span className="text-slate-400">· {inv.role}</span>
+                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button type="button" onClick={() => copyInvite(inv.token)} className="text-xs font-medium text-blue-700 hover:underline">
+                      {copiedToken === inv.token ? "Copied!" : "Copy link"}
+                    </button>
+                    <button type="button" onClick={() => revokeInvite(inv.id)} className="text-xs text-slate-400 hover:text-red-600">Revoke</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleInvite} className="flex gap-2 border-t border-slate-100 pt-4">
+          <input type="email" placeholder="Invite by email" className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" value={memberEmail} onChange={(e) => setMemberEmail(e.target.value)} required />
           <select className="border border-slate-300 rounded-lg px-3 py-2 text-sm" value={memberRole} onChange={(e) => setMemberRole(e.target.value)}>
             <option value="writer">Writer</option>
             <option value="approver">Approver</option>
             <option value="admin">Admin</option>
           </select>
-          <button type="submit" className="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium">Add</button>
+          <button type="submit" className="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium">Invite</button>
         </form>
+        <p className="text-xs text-slate-400 mt-2">Creating an invite copies a shareable link to your clipboard — send it to them. They set their own password and join automatically.</p>
       </section>
     </div>
   );
